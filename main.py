@@ -13,7 +13,7 @@ driver = webdriver.Chrome(service=my_service)
 driver.get("https://orteil.dashnet.org/cookieclicker/")
 
 
-#-------------------------accept cookies, select english, find cookie--------------------------#
+# -----------------------accept cookies, select english, find cookie--------------------------#
 
 driver.implicitly_wait(5)  # wait for page to load
 
@@ -25,74 +25,170 @@ driver.implicitly_wait(5)  # Wait again
 english_button = driver.find_element(By.ID, "langSelect-EN")
 english_button.click()
 
-
-#-----------------get info-------------------#
-driver.refresh() #maybe this will fix the stale element errors
-
+driver.refresh()  # fixed the stale element errors
 
 try:
     cookie = driver.find_element(By.ID, "bigCookie")
 except Exception as e:
     print(f"{e} Tried and failed to get the big cookie")
-    
-try:
-    num_cookies = int(driver.find_element(By.ID, "cookies").text.split()[0])
-    num_cps = float(driver.find_element(By.ID, "cookies").text.split()[-1])
-except Exception as e:
-    print(f"{e} Tried and failed to get number of cookies")
 
-
-
-
-
-#----------------------------------helper functions------------------------------#
+# ---------------------------------------BOT functions----------------------------------------#
 
 
 def click_element(num=1, element=cookie):
-    #defaults to click the cookie once
+    # defaults to click the cookie once
     for _ in range(0, num):
         try:
             element.click()
         except Exception as e:
-            print("Tried and failed to click the cookie")
+            print(f"Tried and failed to click the element {element}")
+            pass
 
-#TODO: only add things that exist to the arr, then click them.
-def find_bling():
+
+def find_upgrades():
+    # returns a list of available upgrades, most advanced upgrade first.
+    # If there are no available upgrades this runs painfully slow
+    # but I can't find any advice other than what I have here.
+    # Apparently this is the best selenium can do really. chat gpt
+    # agrees so that's that lol.
+
+    available_upgrades = []
     try:
-        upgrade_ids = [f"upgrade{i}" for i in range(18)]
-        available_upgrades = [driver.find_element(By.ID, upgrade_id) for upgrade_id in upgrade_ids if driver.find_element(By.ID, upgrade_id).get_property(By.CLASS_NAME) == "enabled"]
-        print(available_upgrades)
-    except:
+        upgrades_parent = driver.find_element(By.ID, "upgrades")
+        new_upgrades = upgrades_parent.find_elements(
+            By.CSS_SELECTOR, ".crate.upgrade.enabled"
+        )
+
+        if new_upgrades:
+            available_upgrades.extend(new_upgrades)
+            print("\nupgrades available :", len(available_upgrades))
+            return reversed(available_upgrades)
+        else:
+            return None
+    except Exception as e:
+        print(f"{e} no upgrades available, error")
         pass
 
+
+def find_products():
+    # returns a list of available products, most advanced upgrade first
+
+    available_products = []
     try:
-        product_ids = [f"product{i}" for i in range(18)]
-        available_products = [driver.find_element(By.ID, product_id) for product_id in product_ids if driver.find_element(By.ID, product_id).get_property(By.CLASS_NAME) == "enabled"]
-        print(available_products)
-    except:
+        products_parent = driver.find_element(By.ID, "products")
+        new_products = products_parent.find_elements(
+            By.CSS_SELECTOR, ".product.unlocked.enabled"
+        )
+
+        if new_products:
+            available_products.extend(new_products)
+            print("\nproducts:", len(available_products))
+            return reversed(available_products)
+        else:
+            return None
+    except Exception as e:
+        print(f"{e} error when getting available products")
         pass
 
 
+def early_game_strat(buy_p: bool):
+    # This strat would works until you buy too many grandmas and they are like 70k per.
+    # Then this will just be buying grandmas and clickers for an eternity.
+    # With this strat that's around 7000cps.
 
-#-----------------------main loop------------------------------#
+    buy_product = buy_p  # this is set here to prevent emptying your cookie wallet every loop
+
+    if find_upgrades() is not None:  # if there are upgrades then click them.
+        for upgrade in find_upgrades():
+            try:
+                click_element(element=upgrade)
+            except Exception as e:
+                print(f"{e} error while trying to click upgrade")
+                pass
+
+    if (
+        buy_product and find_products() is not None
+    ):  # only buy products every other loop
+        for product in find_products():
+            num_cookies = int(
+                driver.find_element(By.ID, "cookies")
+                .text.replace(",", "")
+                .split()[0]
+            )  # check how many cookies I have
+
+            while (
+                int(
+                    product.find_element(
+                        By.CSS_SELECTOR, (".content .price")
+                    ).text.replace(",", "")
+                )
+                < num_cookies
+            ):
+                click_element(element=product)
+                num_cookies = int(
+                    driver.find_element(By.ID, "cookies")
+                    .text.replace(",", "")
+                    .split()[0]
+                )  # update num_cookies and keep buyin' if ya got some
+
+
+def mid_game_strat():
+    if find_upgrades() is not None:  # if there are upgrades then click them.
+        for upgrade in find_upgrades():
+            try:
+                click_element(element=upgrade)
+            except Exception as e:
+                print(f"{e} error while trying to click upgrade")
+                pass
+
+    for product in find_products():
+        product_price = int(
+            product.find_element(
+                By.CSS_SELECTOR, (".content .price")
+            ).text.replace(",", "")
+        )
+        num_cookies = int(
+            driver.find_element(By.ID, "cookies")
+            .text.replace(",", "")
+            .split()[0]
+        )
+        while (
+            num_cookies / 2
+        ) > product_price:  # should be saving some cookies here and using money on upgrades instead.
+            click_element(element=product)
+
+
+# -----------------------------------------main loop-------------------------------------------#
 
 
 running = True
+buy_products = True
+cps_grapher = []
+clickin_time = 15
 while running:
     start_time = time.time()
-    while (time.time() - start_time) < 20:
-        if keyboard.is_pressed("q"):
+
+    while (time.time() - start_time) < clickin_time:
+        if keyboard.is_pressed(
+            "q"
+        ):  # have to press 'q' when clickin' is happenin'
             running = False
             break
-        try:
-            cookie.click()
-        except Exception as e:
-            print("Tried and failed to click the cookie")
-        
-    find_bling()
 
-    
+        click_element()
+    cps = int(
+        driver.find_element(By.ID, "cookies").text.replace(",", "").split()[-1]
+    )
+    cps_grapher.append((time.time(), cps))
 
-    
+    if cps <= 5000:
+        early_game_strat(buy_products)
+        buy_products = not buy_products
+    elif cps > 5000:
+        mid_game_strat()
+        clickin_time = 30
+
+with open("cps_grapher.txt", "w") as file:
+    file.write('\n'.join(f"{tup[0]} {tup[1]}" for tup in cps_grapher)) # used to create graph of cps over time
 
 driver.quit()
