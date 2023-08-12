@@ -1,6 +1,8 @@
-# This program will play cookie clicker like it's the only thing it was made for
-# The program will work until you surpass 999,999 cookies per second or
-# 999 quadrillion cookies.
+# This program will play cookie clicker like it's a retired HOA president
+# The program will work until you surpass 999 quadrillion cookies per second or
+# 999 quadrillion cookies. 
+# NOTE: You have to press 'q' to quit the program and save
+
 
 import time
 import keyboard
@@ -157,8 +159,8 @@ def early_game_strat(buy_p: bool):
 
 
 def mid_game_strat(buy_p: bool):
-    # After an hour of running early_game_strat I decided to add this for cps > 5000.
-    # prevents grandmapacolypse
+    # After an hour of running early_game_strat I decided to add this for cps > 1000.
+    # prevents grandmapacolypse and increases cps more than early game strat.
 
     buy_product = buy_p
 
@@ -209,15 +211,14 @@ while running:
     while (time.time() - start_time) < clickin_time:
         if keyboard.is_pressed(
             "q"
-        ):  # have to press 'q' when clickin' is happenin' to quit
+        ):  # have to press 'q' when clicking to quit
             running = False
             break
 
         click_element()
-    # This will only work up to 999,999 cps.
-    # This and anything over 999 quadrillion will crash the program
-    cps = float(
-        driver.find_element(By.ID, "cookies").text.replace(",", "").split()[-1]
+
+    cps = extract_number(
+        driver.find_element(By.ID, "cookies").text.split()[-2:]
     )
 
     if cps <= 3000:
