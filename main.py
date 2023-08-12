@@ -171,10 +171,10 @@ def mid_game_strat(buy_p: bool):
                 pass
     if buy_product and find_products() is not None:
         for product in find_products():
-            product_price = int(
+            product_price = extract_number(
                 product.find_element(
                     By.CSS_SELECTOR, (".content .price")
-                ).text.replace(",", "")
+                ).text.split()
             )
             num_cookies = extract_number(
                 driver.find_element(By.ID, "cookies").text.split()[:2]
@@ -188,13 +188,11 @@ def mid_game_strat(buy_p: bool):
                 num_cookies = extract_number(
                     driver.find_element(By.ID, "cookies").text.split()[:2]
                 )  # update num_cookies and keep buyin' if ya got some
-                product_price = int(
+                product_price = extract_number(
                     product.find_element(
                         By.CSS_SELECTOR, (".content .price")
-                    ).text.replace(
-                        ",", ""
-                    )  # update product price
-                )
+                    ).text.split()
+                )  # update product price
 
 
 # -----------------------------------------main loop-------------------------------------------#
