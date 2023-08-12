@@ -212,10 +212,11 @@ while running:
             break
 
         click_element()
-
+    # This will only work up to 999,999 cps. 
+    # This and anything over 999 quadrillion will crash the program
     cps = float(
         driver.find_element(By.ID, "cookies").text.replace(",", "").split()[-1]
-    )
+    ) 
 
     if cps <= 3000:
         early_game_strat(buy_products)
