@@ -35,6 +35,32 @@ except Exception as e:
 # ---------------------------------------BOT functions----------------------------------------#
 
 
+def extract_number(value_lst) -> int:
+    # This will handle the string number values in cookie clicker.
+    # need to pass a list with 2 elements as cookie clicker uses
+    # 'x,xxx cookies' or 'x.xx million cookies' for counting and
+    # includes cps in the HTML element. That's why num_cookies takes
+    # the first two values of the list and cps takes the last value.
+    # it's also why I turn text into a list then switch back to a string...
+    value_str = " ".join(value_lst)
+
+    suffixes = {
+        "million": 10**6,
+        "billion": 10**9,
+        "trillion": 10**12,
+        "quadrillion": 10**15,
+    } # if you pass quadrillion cookies then that's great for you. Go outside.
+
+    for suffix, multiplier in suffixes.items():
+        if suffix in value_str:
+            value_float = float("".join(filter(str.isdigit, value_str)))
+            value_int = int(value_float * multiplier)
+            return value_int
+
+    value_int = int(value_lst[0].replace(",", ""))
+    return value_int
+
+
 def click_element(num=1, element=cookie):
     # defaults to click the cookie once
     for _ in range(0, num):
@@ -61,7 +87,6 @@ def find_upgrades():
 
         if new_upgrades:
             available_upgrades.extend(new_upgrades)
-            print("\nupgrades available :", len(available_upgrades))
             return reversed(available_upgrades)
         else:
             return None
@@ -82,7 +107,6 @@ def find_products():
 
         if new_products:
             available_products.extend(new_products)
-            print("\nproducts:", len(available_products))
             return reversed(available_products)
         else:
             return None
@@ -110,10 +134,8 @@ def early_game_strat(buy_p: bool):
         buy_product and find_products() is not None
     ):  # only buy products every other loop
         for product in find_products():
-            num_cookies = int(
-                driver.find_element(By.ID, "cookies")
-                .text.replace(",", "")
-                .split()[0]
+            num_cookies = extract_number(
+                driver.find_element(By.ID, "cookies").text.split()[:2]
             )  # check how many cookies I have
 
             while (
@@ -125,14 +147,17 @@ def early_game_strat(buy_p: bool):
                 < num_cookies
             ):
                 click_element(element=product)
-                num_cookies = int(
-                    driver.find_element(By.ID, "cookies")
-                    .text.replace(",", "")
-                    .split()[0]
+                num_cookies = extract_number(
+                    driver.find_element(By.ID, "cookies").text.split()[:2]
                 )  # update num_cookies and keep buyin' if ya got some
 
 
-def mid_game_strat():
+def mid_game_strat(buy_p: bool):
+    # After an hour of running early_game_strat I decided to add this for cps > 5000.
+    # prevents grandmapacolypse
+
+    buy_product = buy_p
+
     if find_upgrades() is not None:  # if there are upgrades then click them.
         for upgrade in find_upgrades():
             try:
@@ -140,22 +165,32 @@ def mid_game_strat():
             except Exception as e:
                 print(f"{e} error while trying to click upgrade")
                 pass
+    if buy_product and find_products() is not None:
+        for product in find_products():
+            product_price = int(
+                product.find_element(
+                    By.CSS_SELECTOR, (".content .price")
+                ).text.replace(",", "")
+            )
+            num_cookies = extract_number(
+                driver.find_element(By.ID, "cookies").text.split()[:2]
+            )
 
-    for product in find_products():
-        product_price = int(
-            product.find_element(
-                By.CSS_SELECTOR, (".content .price")
-            ).text.replace(",", "")
-        )
-        num_cookies = int(
-            driver.find_element(By.ID, "cookies")
-            .text.replace(",", "")
-            .split()[0]
-        )
-        while (
-            num_cookies / 2
-        ) > product_price:  # should be saving some cookies here and using money on upgrades instead.
-            click_element(element=product)
+            while (
+                num_cookies / 2.0
+            ) > product_price:  # should be saving some cookies here and using money on upgrades instead.
+                click_element(element=product)
+
+                num_cookies = extract_number(
+                    driver.find_element(By.ID, "cookies").text.split()[:2]
+                )  # update num_cookies and keep buyin' if ya got some
+                product_price = int(
+                    product.find_element(
+                        By.CSS_SELECTOR, (".content .price")
+                    ).text.replace(
+                        ",", ""
+                    )  # update product price
+                )
 
 
 # -----------------------------------------main loop-------------------------------------------#
@@ -165,30 +200,37 @@ running = True
 buy_products = True
 cps_grapher = []
 clickin_time = 15
+grapher_start_time = time.time()
 while running:
     start_time = time.time()
 
     while (time.time() - start_time) < clickin_time:
         if keyboard.is_pressed(
             "q"
-        ):  # have to press 'q' when clickin' is happenin'
+        ):  # have to press 'q' when clickin' is happenin' to quit
             running = False
             break
 
         click_element()
-    cps = int(
+
+    cps = float(
         driver.find_element(By.ID, "cookies").text.replace(",", "").split()[-1]
     )
-    cps_grapher.append((time.time(), cps))
 
-    if cps <= 5000:
+    if cps <= 3000:
         early_game_strat(buy_products)
-        buy_products = not buy_products
-    elif cps > 5000:
-        mid_game_strat()
+    elif cps > 3000:
+        mid_game_strat(buy_products)
         clickin_time = 30
 
+    buy_products = not buy_products
+
+    grapher_total_time = int(time.time() - grapher_start_time)
+    cps_grapher.append((grapher_total_time, cps))
+
 with open("cps_grapher.txt", "w") as file:
-    file.write('\n'.join(f"{tup[0]} {tup[1]}" for tup in cps_grapher)) # used to create graph of cps over time
+    file.write(
+        "\n".join(f"{tup[0]} {tup[1]}" for tup in cps_grapher)
+    )  # used to create graph of cps over time
 
 driver.quit()
