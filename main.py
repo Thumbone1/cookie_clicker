@@ -1,3 +1,7 @@
+# This program will play cookie clicker like it's the only thing it was made for
+# The program will work until you surpass 999,999 cookies per second or
+# 999 quadrillion cookies.
+
 import time
 import keyboard
 from selenium import webdriver
@@ -49,7 +53,7 @@ def extract_number(value_lst) -> int:
         "billion": 10**9,
         "trillion": 10**12,
         "quadrillion": 10**15,
-    } # if you pass quadrillion cookies then that's great for you. Go outside.
+    }  # if you pass quadrillion cookies then that's great for you. Go outside.
 
     for suffix, multiplier in suffixes.items():
         if suffix in value_str:
@@ -212,11 +216,11 @@ while running:
             break
 
         click_element()
-    # This will only work up to 999,999 cps. 
+    # This will only work up to 999,999 cps.
     # This and anything over 999 quadrillion will crash the program
     cps = float(
         driver.find_element(By.ID, "cookies").text.replace(",", "").split()[-1]
-    ) 
+    )
 
     if cps <= 3000:
         early_game_strat(buy_products)
