@@ -63,7 +63,7 @@ def extract_number(value_lst) -> int:
             value_int = int(value_float * multiplier)
             return value_int
 
-    value_int = int(value_lst[0].replace(",", ""))
+    value_int = float(value_lst[0].replace(",", ""))
     return value_int
 
 
@@ -218,7 +218,7 @@ while running:
         click_element()
 
     cps = extract_number(
-        driver.find_element(By.ID, "cookies").text.split()[-2:]
+        driver.find_element(By.ID, "cookies").text.split()[-1:]
     )
 
     if cps <= 3000:
